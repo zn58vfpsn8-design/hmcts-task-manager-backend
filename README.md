@@ -3,9 +3,11 @@
 ## Overview
 
 HMCTS requires a task management system that enables caseworkers to keep track of their tasks and manage them efficiently.
+
 The system supports task prioritisation through due dates, task status tracking, and input validation to help caseworkers organise and manage their workload effectively.
 
 This project is the backend for a task management application developed as part of the HMCTS Developer Technical Test.
+
 It provides REST API endpoints to create, view, update, and delete tasks. Tasks are stored in a PostgreSQL database.
 
 ## Features
@@ -33,22 +35,63 @@ It provides REST API endpoints to create, view, update, and delete tasks. Tasks 
 
 ## Task Structure
 
-- `id`: Automatically generated task ID
-- `title`: Required, maximum 200 characters
-- `description`: Optional, maximum 5,000 characters
-- `status`: `TODO`, `IN_PROGRESS`, or `COMPLETED`
-- `dueDateTime`: Required due date and time
+Each task contains the following fields:
+
+- `id`: Automatically generated unique task ID (primary key).
+- `title`: Required task title, with a maximum length of 200 characters.
+- `description`: Optional task description, with a maximum length of 5,000 characters.
+- `status`: Required task status. Supported values are `TODO`, `IN_PROGRESS`, and `COMPLETED`.
+- `dueDateTime`: Required task due date and time, represented using Java `LocalDateTime`.
+
+### Supported Task Statuses
+
+- `TODO` – Task has not yet been started.
+- `IN_PROGRESS` – Task is currently being worked on.
+- `COMPLETED` – Task has been completed.
+
+## Database Structure
+
+The application uses PostgreSQL for persistent task storage.
+
+Database configuration:
+
+- Database name: `hmcts_task_manager_db`
+- Database host: `localhost`
+- Database port: `5432`
+- Table name: `public.tasks`
+
+### Tasks Table
+
+The `tasks` table stores the task records with the following columns:
+
+- `id` – `BIGINT`, primary key, automatically generated using an identity column.
+- `title` – `VARCHAR(200)`, required task title.
+- `description` – `TEXT`, optional task description.
+- `status` – `VARCHAR(30)`, required task status.
+- `due_date_time` – `TIMESTAMP(6)`, task due date and time.
+
+The database uses a primary key on `id` and a check constraint to restrict task statuses to `TODO`, `IN_PROGRESS`, or `COMPLETED`.
+
+The API uses camelCase field names, such as `dueDateTime`, while the database uses snake_case column names, such as `due_date_time`.
+
+### Due Date Validation
+
+The due date and time are mandatory when creating a task.
+
+The current implementation validates that a due date and time are provided, but does not explicitly reject dates in the past. If this behaviour is required in the future, an additional validation rule, such as Jakarta Validation's `@FutureOrPresent`, can be introduced with corresponding tests.
+
+Existing tasks remain retrievable through the API regardless of their due dates.
 
 ## API Endpoints
 
 Base URL: `http://localhost:4000/api/tasks`
 
-- `POST /api/tasks` — Create a task
-- `GET /api/tasks` — Retrieve all tasks
-- `GET /api/tasks/{id}` — Retrieve a task by ID
-- `PUT /api/tasks/{id}` — Update task details
-- `PATCH /api/tasks/{id}/status` — Update task status
-- `DELETE /api/tasks/{id}` — Delete a task
+- `POST /api/tasks` – Create a task.
+- `GET /api/tasks` – Retrieve all tasks.
+- `GET /api/tasks/{id}` – Retrieve a task by ID.
+- `PUT /api/tasks/{id}` – Update task details.
+- `PATCH /api/tasks/{id}/status` – Update task status.
+- `DELETE /api/tasks/{id}` – Delete a task.
 
 ### 1. Create a Task
 
@@ -65,7 +108,7 @@ Request body:
 }
 ```
 
-ReturnsReturns `201 Created` with the details of the newly created task, including its generated ID.
+Returns `201 Created` with the details of the newly created task, including its generated ID.
 
 ### 2. Retrieve All Tasks
 
@@ -83,7 +126,7 @@ Returns `200 OK` if the task exists, or `404 Not Found` if it does not.
 
 `PUT /api/tasks/{id}`
 
-example : /api/tasks/1
+Example: `PUT /api/tasks/1`
 
 Request body:
 
@@ -124,7 +167,7 @@ Swagger UI provides an interactive way to view and test the API endpoints.
 
 Start the backend and open:
 
-[http://localhost:4000/swagger-ui/index.html](http://localhost:4000/swagger-ui/index.html)
+`http://localhost:4000/swagger-ui/index.html`
 
 To test an endpoint:
 
@@ -150,13 +193,21 @@ You can also test validation by submitting a blank title, an overly long title, 
 
 The API validates incoming requests and returns appropriate error responses.
 
+Current request validation includes:
+
+- A required, non-blank task title.
+- A maximum title length of 200 characters.
+- A maximum description length of 5,000 characters.
+- A required task status.
+- A required due date and time.
+
+The API uses the following HTTP response codes:
+
+- `200 OK` – Request completed successfully.
+- `201 Created` – Task created successfully.
+- `204 No Content` – Task deleted successfully.
 - `400 Bad Request` – Invalid request data or a supported request parsing error.
 - `404 Not Found` – The requested task does not exist.
-- `201 Created` – Task created successfully.
-- `200 OK` – Request completed successfully.
-- `204 No Content` – Task deleted successfully.
-
-Validation includes a required, non-blank title, a maximum title length of 200 characters, a maximum description length of 5,000 characters, and required status and due date/time fields.
 
 ## Prerequisites
 
@@ -175,15 +226,19 @@ Create a `.env` file in the backend project root with the following settings:
 
 ```dotenv
 SERVER_PORT=4000
+
 DB_HOST=localhost
+
 DB_PORT=5432
+
 DB_NAME=hmcts_task_manager_db
+
 DB_USER_NAME=your_database_username
+
 DB_PASSWORD=your_database_password
 ```
 
 Replace the example username and password with your local PostgreSQL credentials.
-
 
 Make sure PostgreSQL is running and the specified database and user exist before starting the application.
 
@@ -199,12 +254,15 @@ These commands make the variables available to the application process. Run them
 
 The application also has an optional Spring configuration import from `/mnt/secrets/test/`, which can be used when configuration values are supplied through that mounted directory.
 
+Do not include real database passwords or other sensitive credentials in public repository documentation.
+
 ## Running the Application
 
 Clone the backend repository:
 
 ```bash
-git clone https://github.com/anukjose/hmcts-task-manager-backend.git
+git clone https://github.com/zn58vfpsn8-design/hmcts-task-manager-backend.git
+
 cd hmcts-task-manager-backend
 ```
 
@@ -270,7 +328,7 @@ src/
 The main components are:
 
 - Controllers – Handle HTTP requests and responses.
-- DTOs – Define the data accepted by the API.
+- DTOs – Define and validate the data accepted by the API.
 - Models – Define the task entity and task status.
 - Repositories – Interact with the database through Spring Data JPA.
 - Services – Contain the task management logic.
@@ -281,7 +339,7 @@ The main components are:
 
 The frontend is maintained in a separate repository:
 
-[HMCTS Task Manager Frontend](https://github.com/anukjose/hmcts-task-manager-frontend)
+[HMCTS Task Manager Frontend](https://github.com/zn58vfpsn8-design/hmcts-task-manager-frontend)
 
 It communicates with the backend through the REST API. The frontend and backend must both be running for the complete application to work.
 
@@ -289,4 +347,6 @@ It communicates with the backend through the REST API. The frontend and backend 
 
 - The application uses PostgreSQL for persistent storage.
 - Task IDs are generated by the database.
+- Task status values are restricted to `TODO`, `IN_PROGRESS`, and `COMPLETED`.
 - The due date and time use the ISO date-time format, for example `2026-11-05T14:30:00`.
+- The API uses `LocalDateTime` for task due dates and times.
